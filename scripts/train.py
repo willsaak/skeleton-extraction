@@ -16,13 +16,41 @@ def load_image(path: Path):
     return image
 
 
-input_path = Path("/home/william/Documents/Code/ml-comp-skeleton-extraction/data/train")
-target_path = Path("/home/william/Documents/Code/ml-comp-skeleton-extraction/data/visualization")
+def augment_images(input, target, augmenter: keras.preprocessing.image.ImageDataGenerator):
+    transformation = augmenter.get_random_transform((256, 256, 1))
+
+    augmented_input = augmenter.apply_transform(input, transformation)
+    augmented_target = augmenter.apply_transform(target, transformation)
+
+    #
+    # Image.fromarray((input * 255).astype(np.uint8).squeeze()).show()
+    # Image.fromarray((target * 255).astype(np.uint8).squeeze()).show()
+    # Image.fromarray((augmented_input * 255).astype(np.uint8).squeeze()).show()
+    # Image.fromarray((augmented_target * 255).astype(np.uint8).squeeze()).show()
+
+    return augmented_input, augmented_target
+
+
+def augment_batch(batch, augmenter):
+    augmented_batch_input = []
+    augmented_batch_target = []
+    for input_, target in zip(batch[0], batch[1]):
+        i, t = augment_images(input_, target, augmenter)
+        augmented_batch_input.append(i)
+        augmented_batch_target.append(t)
+    augmented_batch_input = np.stack(augmented_batch_input)
+    augmented_batch_target = np.stack(augmented_batch_target)
+
+    return augmented_batch_input, augmented_batch_target
+
+
+input_path = Path("/home/alexander/research/projects/ml-competition-2/data/train")
+target_path = Path("/home/alexander/research/projects/ml-competition-2/visualization")
 dst = Path("../../models")
 dst = Path(dst) / datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 
 val_size = 0.2
-batch_size = 8
+batch_size = 2
 epochs = 100
 
 input_data = sorted([input_path / x for x in input_path.glob("*.png")])
@@ -35,24 +63,6 @@ input_data_train = np.stack([load_image(x) for x in input_data_train])
 input_data_val = np.stack([load_image(x) for x in input_data_val])
 target_data_train = 1 - np.stack([load_image(x) for x in target_data_train])
 target_data_test = 1 - np.stack([load_image(x) for x in target_data_test])
-
-
-# print()
-
-
-def augment_images(input, target, augmenter: keras.preprocessing.image.ImageDataGenerator):
-    transformation = augmenter.get_random_transform((256, 256, 1))
-
-    augmented_input = augmenter.apply_transform(input, transformation)
-    augmented_target = augmenter.apply_transform(target, transformation)
-
-    return augmented_input, augmented_target
-    #
-    # Image.fromarray((input * 255).astype(np.uint8).squeeze()).show()
-    # Image.fromarray((target * 255).astype(np.uint8).squeeze()).show()
-    # Image.fromarray((augmented_input * 255).astype(np.uint8).squeeze()).show()
-    # Image.fromarray((augmented_target * 255).astype(np.uint8).squeeze()).show()
-
 
 train_augmenter = keras.preprocessing.image.ImageDataGenerator(
     rotation_range=180,
@@ -68,41 +78,20 @@ train_augmenter = keras.preprocessing.image.ImageDataGenerator(
     rescale=None
 )
 
-
-# augment_images(input_data_train[0], target_data_train[0], train_augmenter)
-
-def augment_batch(batch, augmenter):
-    augmented_batch_input = []
-    augmented_batch_target = []
-    for input_, target in zip(batch[0], batch[1]):
-        i, t = augment_images(input_, target, augmenter)
-        augmented_batch_input.append(i)
-        augmented_batch_target.append(t)
-    augmented_batch_input = np.stack(augmented_batch_input)
-    augmented_batch_target = np.stack(augmented_batch_target)
-
-    return augmented_batch_input, augmented_batch_target
-
-
 train_generator = DataGenerator(input_data_train, target_data_train, batch_size=batch_size, shuffle=True,
                                 map_fn=lambda x: augment_batch(x, train_augmenter))
 val_generator = DataGenerator(input_data_val, target_data_test, batch_size=batch_size, shuffle=False)
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(str(dst / 'checkpoint.hdf5'), monitor='val_loss', verbose=1,
-                                                          save_best_only=True, save_weights_only=False)
+                                                      save_best_only=True, save_weights_only=False)
 tensorboard_callback = keras.callbacks.TensorBoard(str(dst / 'summary'), write_graph=False)
 
 model = unet(batch_normalization=True)
-model.compile(loss='binary_crossentropy',
-              optimizer="adam",
-              metrics=['acc'])
+model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['acc'])
 
 assert not dst.exists()
 dst.mkdir(parents=True)
 print(f"Save checkpoints to {dst}")
 
-model.fit_generator(train_generator,
-                    epochs=epochs,
-                    validation_data=val_generator,
-                    callbacks=[checkpoint_callback, tensorboard_callback],
-                    verbose=1)
+model.fit(train_generator, epochs=epochs, validation_data=val_generator,
+          callbacks=[checkpoint_callback, tensorboard_callback], verbose=1)
