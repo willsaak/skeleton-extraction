@@ -16,14 +16,14 @@ def load_image(path: Path):
     return image
 
 
-input_path = Path("/home/alexander/research/projects/ml-competition-2/data/train")
-target_path = Path("/home/alexander/research/projects/ml-competition-2/visualization")
+input_path = Path("/home/william/Documents/Code/ml-comp-skeleton-extraction/data/train")
+target_path = Path("/home/william/Documents/Code/ml-comp-skeleton-extraction/data/visualization")
 dst = Path("../../models")
 dst = Path(dst) / datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 
 val_size = 0.2
-batch_size = 2
-epochs = 4
+batch_size = 8
+epochs = 100
 
 input_data = sorted([input_path / x for x in input_path.glob("*.png")])
 target_data = sorted([target_path / x for x in target_path.glob("*.png")])
@@ -74,7 +74,7 @@ train_augmenter = keras.preprocessing.image.ImageDataGenerator(
 def augment_batch(batch, augmenter):
     augmented_batch_input = []
     augmented_batch_target = []
-    for input_, target in batch:
+    for input_, target in zip(batch[0], batch[1]):
         i, t = augment_images(input_, target, augmenter)
         augmented_batch_input.append(i)
         augmented_batch_target.append(t)
@@ -104,4 +104,5 @@ print(f"Save checkpoints to {dst}")
 model.fit_generator(train_generator,
                     epochs=epochs,
                     validation_data=val_generator,
+                    callbacks=[checkpoint_callback, tensorboard_callback],
                     verbose=1)

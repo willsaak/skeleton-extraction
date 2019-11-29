@@ -63,7 +63,7 @@ class DataGenerator(keras.utils.Sequence):
     def __getitem__(self, index: int):
         batch_start, batch_end = self._batches[index]
         batch_indices = self._indices[batch_start:batch_end]
-        batch = self._map_fn([self.x[batch_indices], self.y[batch_indices]])
+        batch = self._map_fn((self.x[batch_indices], self.y[batch_indices]))
         return batch
 
     def __len__(self):
