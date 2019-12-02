@@ -47,8 +47,8 @@ target_path = Path("../data/visualization")
 dst = Path("../../models") / datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 
 val_size = 0.2
-batch_size = 2
-epochs = 100
+batch_size = 1
+epochs = 2
 
 input_data = sorted([x for x in input_path.glob("*.png")])
 target_data = sorted([x for x in target_path.glob("*.png")])
@@ -85,6 +85,7 @@ tensorboard_callback = keras.callbacks.TensorBoard(str(dst / 'summary'), write_g
 
 model = unet(batch_normalization=True)
 model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['acc'])
+model.summary()
 
 dst.mkdir(exist_ok=False, parents=True)
 print(f"Save checkpoints to {dst}")
