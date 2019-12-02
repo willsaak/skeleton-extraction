@@ -108,4 +108,3 @@ venv.bak/
 data/*
 !data/train.zip
 !data/test.zip
-!data/examples/
