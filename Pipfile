@@ -10,6 +10,9 @@ tensorflow-gpu = "==2.1.0rc0"
 pillow = "*"
 scikit-learn = "*"
 click = "*"
+scikit-image = "*"
+networkx = "*"
+shapely = "*"
 
 [requires]
 python_version = "3.6"
