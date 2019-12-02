@@ -11,17 +11,17 @@ from postprocessing.extract_skeleton import load_image, extract_skeleton
 @click.command()
 @click.option('--image-folder',
               type=click.Path(exists=True),
-              default='/home/alexander/research/projects/ml-competition-2/data/test',
+              default='../data/test',
               show_default=True)
 @click.option('--dst-folder',
               type=click.Path(dir_okay=True),
-              default='../data',
+              default='../data/submissions',
               show_default=True)
 def main(image_folder, dst_folder):
     image_folder, dst_folder = Path(image_folder), Path(dst_folder)
 
-    input_images = sorted([image_folder / filename for filename in image_folder.glob("*.png")])
-    # ground_truths = sorted([image_folder / filename for filename in image_folder.glob("*.pkl")])
+    input_images = sorted([filename for filename in image_folder.glob("*.png")])
+    # ground_truths = sorted([filename for filename in image_folder.glob("*.pkl")])
 
     threshold = 0
 
