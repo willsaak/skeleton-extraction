@@ -2,6 +2,7 @@ import pickle
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw
 from shapely.geometry import MultiLineString
 
 
@@ -98,9 +99,20 @@ def plot_skeleton(plot_path, graph, coordinates, show_branches=False):
     else:
         nx.draw_networkx_edges(graph, coordinates, width=1)
 
-    # plt.savefig(plot_path)
-    plt.show()
+    plt.savefig(plot_path)
     plt.close()
+
+
+def plot_skeleton_v2(plot_path, graph, coordinates):
+    image = Image.new('L', (256, 256))
+    coordinates = np.stack([coordinates[:, 0] * image.size[1], (1 - coordinates[:, 1]) * image.size[0]], axis=-1)
+
+    draw = ImageDraw.Draw(image)
+    branches = get_branches(graph)
+    for b in branches.values():
+        draw.line([tuple(point.tolist()) for point in coordinates[b]], fill=255, width=1)
+
+    image.save(plot_path)
 
 
 def get_branches(graph):

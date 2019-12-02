@@ -1,23 +1,8 @@
 import click
-import numpy as np
 import os
 from glob import glob
-from PIL import Image, ImageDraw
 
-from skeleton.utils import build_skeleton_graph, get_branches, load_skeleton
-from postprocessing.extract_skeleton import load_image, show_image
-
-
-def plot_skeleton(plot_path, graph, coordinates, show_branches=False):
-    image = Image.new('L', (256, 256))
-    coordinates = np.stack([coordinates[:, 0] * image.size[1], (1 - coordinates[:, 1]) * image.size[0]], axis=-1)
-
-    draw = ImageDraw.Draw(image)
-    branches = get_branches(graph)
-    for b in branches.values():
-        draw.line([tuple(point.tolist()) for point in coordinates[b]], fill=255, width=1)
-
-    image.save(plot_path)
+from skeleton.utils import build_skeleton_graph, load_skeleton, plot_skeleton_v2
 
 
 def __load_and_plot(file_path, plot_dir):
@@ -25,15 +10,19 @@ def __load_and_plot(file_path, plot_dir):
     print(filename)
     adjacency, coordinates = load_skeleton(file_path)
     graph = build_skeleton_graph(adjacency)
-    plot_skeleton(plot_dir + '/{}.png'.format(filename), graph, coordinates, show_branches=False)
+    plot_skeleton_v2(plot_dir + '/{}.png'.format(filename), graph, coordinates)
 
 
 @click.command()
 @click.option('--pkl_path',
-              default='/home/alexander/research/projects/ml-competition-2/data/train',
+              type=click.Path(exists=True),
+              default='../data/train',
+              show_default=True,
               help='pickle file path or directory of skeleton(s)')
 @click.option('--plot_dir',
-              default='/home/alexander/research/projects/ml-competition-2/visualization',
+              type=click.Path(dir_okay=True),
+              default='../data/visualization',
+              show_default=True,
               help='plot directory')
 def main(pkl_path, plot_dir):
     os.makedirs(plot_dir, exist_ok=True)
