@@ -5,7 +5,7 @@ from typing import Callable, Collection, List, Optional, Tuple
 
 class DataGenerator(keras.utils.Sequence):
     x: np.ndarray
-    y: Optional[np.ndarray]
+    y: np.ndarray
     class_mode: Optional[str]
     samples: int
     batch_size: int
@@ -13,16 +13,16 @@ class DataGenerator(keras.utils.Sequence):
     shuffle: bool
     keep_remainder: bool
 
-    _map_fn: Callable[[List[np.ndarray]], np.ndarray]
+    _map_fn: Callable[[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]]
     _batches: List[Tuple[int, int]]
     _indices: np.ndarray
 
     def __init__(self,
-                 x: Collection,
-                 y: Collection,
+                 x: np.ndarray,
+                 y: np.ndarray,
                  batch_size: int = 32,
                  shuffle: bool = True,
-                 map_fn: Optional[Callable[[List[np.ndarray]], np.ndarray]] = None,
+                 map_fn: Optional[Callable[[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]]] = None,
                  keep_remainder: bool = True) -> None:
         if not isinstance(batch_size, int) or batch_size <= 0:
             raise ValueError(f"`batch_size` argument should be non-negative, but {batch_size} received.")
@@ -34,9 +34,12 @@ class DataGenerator(keras.utils.Sequence):
         self.samples = len(self.x)
         if self.samples <= 0:
             raise ValueError(f"`x` argument should have at least one sample, but {self.samples} samples found.")
-        print(f'Found {self.samples} samples.')
 
         self.y = np.array(y)
+        if len(self.y) != self.samples:
+            raise ValueError(f"Number of samples in `x` and `y` arguments should match, but {self.samples} and "
+                             f"{len(self.y)} samples found.")
+        print(f'Found {self.samples} samples.')
 
         if map_fn is None:
             self._map_fn = lambda batch: batch

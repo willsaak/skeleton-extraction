@@ -2,40 +2,38 @@ import numpy as np
 from datetime import datetime
 from pathlib import Path
 from PIL import Image
-from tensorflow import keras
 from sklearn.model_selection import train_test_split
+from tensorflow import keras
+from typing import Tuple
 
 from models.data_generator import DataGenerator
 from models.unet import unet
 
 
-def load_image(path: Path):
+def load_image(path: Path) -> np.ndarray:
     image = np.array(Image.open(path).convert('L'))
     image = image.astype(np.float32) / 255.
     image = np.expand_dims(image, axis=-1)
     return image
 
 
-def augment_images(input, target, augmenter: keras.preprocessing.image.ImageDataGenerator):
+def augment_input_target(input_: np.ndarray,
+                         target: np.ndarray,
+                         augmenter: keras.preprocessing.image.ImageDataGenerator) -> Tuple[np.ndarray, np.ndarray]:
     transformation = augmenter.get_random_transform((256, 256, 1))
 
-    augmented_input = augmenter.apply_transform(input, transformation)
+    augmented_input = augmenter.apply_transform(input_, transformation)
     augmented_target = augmenter.apply_transform(target, transformation)
-
-    #
-    # Image.fromarray((input * 255).astype(np.uint8).squeeze()).show()
-    # Image.fromarray((target * 255).astype(np.uint8).squeeze()).show()
-    # Image.fromarray((augmented_input * 255).astype(np.uint8).squeeze()).show()
-    # Image.fromarray((augmented_target * 255).astype(np.uint8).squeeze()).show()
 
     return augmented_input, augmented_target
 
 
-def augment_batch(batch, augmenter):
+def augment_batch(batch: Tuple[np.ndarray, np.ndarray],
+                  augmenter: keras.preprocessing.image.ImageDataGenerator) -> Tuple[np.ndarray, np.ndarray]:
     augmented_batch_input = []
     augmented_batch_target = []
     for input_, target in zip(batch[0], batch[1]):
-        i, t = augment_images(input_, target, augmenter)
+        i, t = augment_input_target(input_, target, augmenter)
         augmented_batch_input.append(i)
         augmented_batch_target.append(t)
     augmented_batch_input = np.stack(augmented_batch_input)
@@ -44,25 +42,24 @@ def augment_batch(batch, augmenter):
     return augmented_batch_input, augmented_batch_target
 
 
-input_path = Path("/home/alexander/research/projects/ml-competition-2/data/train")
-target_path = Path("/home/alexander/research/projects/ml-competition-2/visualization")
-dst = Path("../../models")
-dst = Path(dst) / datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+input_path = Path("../data/train")
+target_path = Path("../data/visualization")
+dst = Path("../../models") / datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 
 val_size = 0.2
 batch_size = 2
 epochs = 100
 
-input_data = sorted([input_path / x for x in input_path.glob("*.png")])
-target_data = sorted([target_path / x for x in target_path.glob("*.png")])
+input_data = sorted([x for x in input_path.glob("*.png")])
+target_data = sorted([x for x in target_path.glob("*.png")])
 
 input_data_train, input_data_val, target_data_train, target_data_test = train_test_split(input_data, target_data,
                                                                                          test_size=val_size)
 
 input_data_train = np.stack([load_image(x) for x in input_data_train])
 input_data_val = np.stack([load_image(x) for x in input_data_val])
-target_data_train = 1 - np.stack([load_image(x) for x in target_data_train])
-target_data_test = 1 - np.stack([load_image(x) for x in target_data_test])
+target_data_train = np.stack([load_image(x) for x in target_data_train])
+target_data_test = np.stack([load_image(x) for x in target_data_test])
 
 train_augmenter = keras.preprocessing.image.ImageDataGenerator(
     rotation_range=180,
@@ -89,8 +86,7 @@ tensorboard_callback = keras.callbacks.TensorBoard(str(dst / 'summary'), write_g
 model = unet(batch_normalization=True)
 model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['acc'])
 
-assert not dst.exists()
-dst.mkdir(parents=True)
+dst.mkdir(exist_ok=False, parents=True)
 print(f"Save checkpoints to {dst}")
 
 model.fit(train_generator, epochs=epochs, validation_data=val_generator,
