@@ -17,7 +17,7 @@ from postprocessing.extract_skeleton import load_image, show_image
               default='../../models/2019-12-02-14-31-24/checkpoint.hdf5',
               show_default=True)
 def main(src, checkpoint):
-    filepaths = sorted([filename for filename in Path(src).glob("*.png")])
+    filepaths = sorted(Path(src).glob("*.png"))
 
     model = keras.models.load_model(checkpoint)
     # model.summary()

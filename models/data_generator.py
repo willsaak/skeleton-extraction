@@ -1,6 +1,6 @@
 import numpy as np
 from tensorflow import keras
-from typing import Callable, Collection, List, Optional, Tuple
+from typing import Callable, Collection, List, Optional, Tuple, Union
 
 
 class DataGenerator(keras.utils.Sequence):
@@ -18,8 +18,8 @@ class DataGenerator(keras.utils.Sequence):
     _indices: np.ndarray
 
     def __init__(self,
-                 x: np.ndarray,
-                 y: np.ndarray,
+                 x: Union[Collection[np.ndarray], np.ndarray],
+                 y: Union[Collection[np.ndarray], np.ndarray],
                  batch_size: int = 32,
                  shuffle: bool = True,
                  map_fn: Optional[Callable[[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]]] = None,
