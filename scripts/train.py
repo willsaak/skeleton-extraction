@@ -49,31 +49,28 @@ def main(inputs_path, targets_path, dst, epochs, batch_size, val_size, checkpoin
                                     map_fn=lambda x: augment_batch(x, train_augmenter))
     val_generator = DataGenerator(val_inputs, val_targets, batch_size=batch_size, shuffle=False)
 
-    for batch in train_generator:
-        print()
+    checkpoint = Path(checkpoint)
+    if checkpoint.is_file():
+        model = keras.models.load_model(checkpoint, compile=True)
+    else:
+        model = unet(batch_normalization=True)
+        model.compile(optimizer='adam',
+                      loss='binary_crossentropy',
+                      # loss=balanced_binary_focal_loss(alpha=0.75, gamma=2.0),
+                      metrics=['acc'])
+    # model.summary()
 
-    # checkpoint = Path(checkpoint)
-    # if checkpoint.is_file():
-    #     model = keras.models.load_model(checkpoint, compile=True)
-    # else:
-    #     model = unet(batch_normalization=True)
-    #     model.compile(optimizer='adam',
-    #                   # loss='binary_crossentropy',
-    #                   loss=balanced_binary_focal_loss(alpha=0.75, gamma=2.0),
-    #                   metrics=['acc'])
-    # # model.summary()
-    #
-    # dst = Path(dst) / datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    # # dst.mkdir(exist_ok=False, parents=True)
-    # print(f"Save training to {dst}")
-    #
-    # checkpoint_callback = keras.callbacks.ModelCheckpoint(str(dst / 'checkpoint.hdf5'), monitor='val_loss', verbose=1,
-    #                                                       save_best_only=True, save_weights_only=False)
-    # tensorboard_callback = keras.callbacks.TensorBoard(str(dst / 'summary'), write_graph=False)
-    #
-    # model.fit(train_generator, epochs=epochs, validation_data=val_generator,
-    #           # callbacks=[checkpoint_callback, tensorboard_callback],
-    #           verbose=1)
+    dst = Path(dst) / datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    dst.mkdir(exist_ok=False, parents=True)
+    print(f"Save training to {dst}")
+
+    checkpoint_callback = keras.callbacks.ModelCheckpoint(str(dst / 'checkpoint.hdf5'), monitor='val_loss', verbose=1,
+                                                          save_best_only=True, save_weights_only=False)
+    tensorboard_callback = keras.callbacks.TensorBoard(str(dst / 'summary'), write_graph=False)
+
+    model.fit(train_generator, epochs=epochs, validation_data=val_generator,
+              callbacks=[checkpoint_callback, tensorboard_callback],
+              verbose=1)
 
 
 if __name__ == '__main__':
