@@ -3,6 +3,29 @@ from tensorflow import keras
 from typing import Callable, Collection, List, Optional, Tuple, Union
 
 
+def augment_batch(
+        batch: Tuple[np.ndarray, np.ndarray],
+        augmenter: keras.preprocessing.image.ImageDataGenerator,
+        seed: Optional[int] = None
+) -> Tuple[np.ndarray, np.ndarray]:
+    inputs, targets = batch
+
+    img_shape = inputs.shape[1:]
+    augmented_inputs, augmented_targets = [], []
+    for input_, target in zip(inputs, targets):
+        transform = augmenter.get_random_transform(img_shape, seed=seed)
+
+        augmented_input = augmenter.apply_transform(input_, transform)
+        augmented_target = augmenter.apply_transform(target, transform)
+
+        augmented_inputs.append(augmented_input)
+        augmented_targets.append(augmented_target)
+    augmented_inputs = np.stack(augmented_inputs)
+    augmented_targets = np.stack(augmented_targets)
+
+    return augmented_inputs, augmented_targets
+
+
 class DataGenerator(keras.utils.Sequence):
     x: np.ndarray
     y: np.ndarray

@@ -4,8 +4,11 @@ import pickle
 from datetime import datetime
 from pathlib import Path
 from skimage import morphology
+from tensorflow import keras
 
-from postprocessing.extract_skeleton import load_image, extract_skeleton
+from nn.unet import unet
+from skeleton.image_utils import binarize_image, load_image, skeletonize_image, thin_image
+from skeleton.extract_skeleton import extract_skeleton, extract_skeleton_v2
 
 
 @click.command()
@@ -20,10 +23,13 @@ from postprocessing.extract_skeleton import load_image, extract_skeleton
 def main(image_folder, dst_folder):
     image_folder, dst_folder = Path(image_folder), Path(dst_folder)
 
-    input_images = sorted([filename for filename in image_folder.glob("*.png")])
-    # ground_truths = sorted([filename for filename in image_folder.glob("*.pkl")])
+    input_images = sorted(image_folder.glob("*.png"))
 
-    threshold = 0
+    checkpoint = '../../models/2019-12-06-09-45-22/checkpoint.hdf5'
+    try:
+        model = keras.models.load_model(checkpoint)
+    except ValueError:
+        model = unet(weights=checkpoint, batch_normalization=True)
 
     submission = {}
     for i, image_path in enumerate(input_images):
@@ -31,30 +37,16 @@ def main(image_folder, dst_folder):
         id_ = image_path.stem.split('_')[0]
 
         image = load_image(image_path)
-        image = (image > threshold).astype(np.float32)
 
-        # TODO: replace `morphology.skeletonize` with NN-prediction, then postprocess the prediction
-        image = morphology.skeletonize(image).astype(np.float32)
-        # image = model.predict(np.expand_dims(image, axis=-1)).squeeze(axis=-1)
-        # image = (image > threshold).astype(np.float32)
-        # morphology.thin(binary_image).astype(np.float32)
+        # skeleton = skeletonize_image(binarize_image(image, threshold=0))
+        # pred_adjacency, pred_coordinates = extract_skeleton(skeleton)
 
-        pred_adjacency, pred_coordinates = extract_skeleton(image)
-
-        # gt_adjacency, gt_coordinates = skeleton_utils.load_skeleton(ground_truths[i])
-        # gt_graph = skeleton_utils.build_skeleton_graph(gt_adjacency)
-        # pred_graph = skeleton_utils.build_skeleton_graph(pred_adjacency)
-        #
-        # # skeleton_utils.plot_skeleton('1.png', gt_graph, gt_coordinates, show_branches=False)
-        # # skeleton_utils.plot_skeleton('2.png', pred_graph, pred_coordinates, show_branches=False)
-        #
-        # score = skeleton_utils.evaluate_skeleton(gt_graph, pred_graph, gt_coordinates, pred_coordinates,
-        #                                          num_samples=400, show_plot=True,
-        #                                          # plot_path=plot_dir + '/{}_{}.png'.format(gt_filename, pred_filename)
-        #                                          )
-        # # print(pred_filename, 'score:', score)
-        # print('score:', score)
-        # print()
+        skeleton = model.predict(image[np.newaxis, ..., np.newaxis]).squeeze()
+        skeleton = thin_image(binarize_image(skeleton, threshold=0.15))
+        pred_adjacency, pred_coordinates = extract_skeleton_v2(skeleton)
+        # from skeleton.image_utils import plot_skeleton
+        # from skeleton.utils import build_skeleton_graph
+        # plot_skeleton(build_skeleton_graph(pred_adjacency), pred_coordinates).show()
 
         submission[id_] = {'adjacency': pred_adjacency, 'coordinates': pred_coordinates.tolist()}
     dst_folder.mkdir(exist_ok=True, parents=True)

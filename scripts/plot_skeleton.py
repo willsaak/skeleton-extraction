@@ -2,7 +2,8 @@ import click
 import os
 from glob import glob
 
-from skeleton.utils import build_skeleton_graph, load_skeleton, plot_skeleton_v2
+from skeleton.image_utils import plot_skeleton
+from skeleton.utils import build_skeleton_graph, load_skeleton
 
 
 def __load_and_plot(file_path, plot_dir):
@@ -10,7 +11,7 @@ def __load_and_plot(file_path, plot_dir):
     print(filename)
     adjacency, coordinates = load_skeleton(file_path)
     graph = build_skeleton_graph(adjacency)
-    plot_skeleton_v2(plot_dir + '/{}.png'.format(filename), graph, coordinates)
+    plot_skeleton(graph, coordinates, (512, 512)).save(plot_dir + '/{}.png'.format(filename))
 
 
 @click.command()
@@ -21,7 +22,7 @@ def __load_and_plot(file_path, plot_dir):
               help='pickle file path or directory of skeleton(s)')
 @click.option('--plot_dir',
               type=click.Path(dir_okay=True),
-              default='../data/visualization',
+              default='../data/visualization512',
               show_default=True,
               help='plot directory')
 def main(pkl_path, plot_dir):
