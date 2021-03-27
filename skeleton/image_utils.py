@@ -14,6 +14,13 @@ def load_image(path: [Path, str], size=None) -> np.ndarray:
     return image
 
 
+def resize_image(image: np.ndarray, size):
+    nn_skeleton_small = Image.fromarray((image * 255).astype(np.uint8))
+    nn_skeleton_small = nn_skeleton_small.resize(size)
+    nn_skeleton_small = np.array(nn_skeleton_small, np.float32) / 255.
+    return nn_skeleton_small
+
+
 def show_image(image: np.ndarray):
     Image.fromarray((image * 255).astype(np.uint8)).show()
 

@@ -34,8 +34,10 @@ def choose_start_point(image: np.ndarray,
     """
     coordinates = np.stack(np.nonzero(image), axis=-1)
     _, index = arg_nearest_coordinates(prev_coordinates, coordinates)
-    if index < 0:
-        index = 0  # Try something meaningful?
+    if index < 0 and len(coordinates) > 0:
+        # index = 0  # Try something meaningful?
+        center = np.mean(coordinates, axis=0, keepdims=True)
+        _, index = arg_nearest_coordinates(center, coordinates)
     point = tuple(coordinates[index].tolist())
     return point
 
@@ -139,3 +141,23 @@ def save_skeleton(path: PathLike, adjacency: List[List[int]], coordinates: np.nd
     skeleton = {'adjacency': adjacency, 'coordinates': coordinates.tolist()}
     with path.open('wb') as file:
         pickle.dump(skeleton, file)
+
+
+def extract_skeleton_mst(image: np.ndarray) -> Tuple[List[List[int]], np.ndarray]:
+    coordinates = np.stack(np.nonzero(image), axis=-1)
+    distances = cdist(coordinates, coordinates, 'euclidean')
+    from scipy.sparse.csgraph import minimum_spanning_tree
+    tcsr = minimum_spanning_tree(distances)
+    tcsr = tcsr.toarray().astype(int)
+    tcsr += tcsr.T
+    adjacency = [np.nonzero(col)[0].tolist() for col in tcsr]
+
+    if len(coordinates) > 1:
+        assert is_valid_skeleton(build_skeleton_graph(adjacency))
+
+    if len(coordinates) == 1:
+        adjacency = []
+    coordinates = np.array(coordinates, np.float) / image.shape
+    coordinates = np.stack([coordinates[:, 1], 1 - coordinates[:, 0]], axis=-1)
+
+    return adjacency, coordinates
